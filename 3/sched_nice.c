@@ -19,6 +19,7 @@ static inline long diff_nsec(struct timespec before, struct timespec after)
 static unsigned long loops_per_msec()
 {
     struct timespec before, after;
+
     clock_gettime(CLOCK_MONOTONIC, &before);
 
     unsigned long i;
@@ -70,19 +71,14 @@ int main(int argc, char *argv[])
 {
     int ret = EXIT_FAILURE;
 
-    if(argc < 4){
-        fprintf(stderr, "usage: %s <nproc> <total[ms]> <resolution[ms]> \n", argv[0]);
+    if(argc < 3){
+        fprintf(stderr, "usage: %s <total[ms]> <resolution[ms]> \n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
-    int nproc = atoi(argv[1]);
-    int total = atoi(argv[2]);
-    int resol = atoi(argv[3]);
-
-    if (nproc < 1){
-        fprintf(stderr, "<nproc>(%d) should be <= 1\n", nproc);
-        exit(EXIT_FAILURE);
-    }
+    int nproc = 2;
+    int total = atoi(argv[1]);
+    int resol = atoi(argv[2]);
 
     if(total < 1){
         fprintf(stderr, "<total>(%d) should be <= 1\n", total);
@@ -104,10 +100,7 @@ int main(int argc, char *argv[])
     if (!logbuf)
         err(EXIT_FAILURE, "malloc(logbuf) failed");
 
-    puts("estimating workload which takes just one milisecond");
     unsigned long nloop_per_resol = loops_per_msec() * resol;
-    puts("end estimation");
-    fflush(stdout);
 
     pids = malloc(nproc * sizeof(pid_t));
     if(pids == NULL) {
@@ -124,6 +117,8 @@ int main(int argc, char *argv[])
         if (pids[i] < 0){
             goto wait_children;
         } else if (pids[i] == 0){
+            if (i == 1)
+                nice(5);
             // children
             child_fn(i, logbuf, nrecord, nloop_per_resol, start);
             // shouldn't reach here
